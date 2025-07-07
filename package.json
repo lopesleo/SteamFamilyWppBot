@@ -1,0 +1,34 @@
+{
+  "name": "steamfamilyzap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --exec \"ts-node src/app.ts\"",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "db:schema": "dotenv -e .env -- sh -c 'docker compose exec -T postgres psql -U \"$PG_USER\" -d \"$PG_DATABASE\" < ./src/database/schema.sql'",
+    "db:seed": "ts-node --project tsconfig.json ./src/scripts/db-seed.ts",
+    "db:setFamilyGames": "ts-node --project tsconfig.json ./src/scripts/db-setFamilyGames.ts",
+    "db:syncAllGames": "ts-node --project tsconfig.json ./src/scripts/db-syncAllGamesFromSteam.ts",
+    "db:reset": "pnpm run db:schema && pnpm run db:seed"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.5",
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "@types/pg": "^8.11.6",
+    "dotenv-cli": "^7.4.4",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.0.1",
+    "pg": "^8.12.0",
+    "venom-bot": "^5.3.0"
+  }
+}

@@ -1,0 +1,30 @@
+# Versão do Docker Compose
+version: "3.8"
+
+# Definição dos nossos serviços (containers)
+services:
+  # Nome do nosso serviço de banco de dados
+  postgres:
+    # Usa a imagem oficial do PostgreSQL, versão 15.
+    image: postgres:15
+    # Nome do container. É importante que seja o mesmo que você usa nos scripts do package.json (steamzap-db)
+    container_name: steamzap-db
+    # Reinicia o container automaticamente a menos que ele seja parado manualmente.
+    restart: unless-stopped
+    # Configura as variáveis de ambiente dentro do container.
+    # IMPORTANTE: Estes valores DEVEM ser os mesmos do seu arquivo .env!
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    # Mapeia a porta 5432 do container para a porta 5432 da sua máquina local (host).
+    # Isso permite que sua aplicação Node.js se conecte via localhost:5432.
+    ports:
+      - "5432:5432"
+    # Garante que os dados do banco de dados persistam mesmo se o container for removido.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+# Define os volumes nomeados para persistência de dados.
+volumes:
+  postgres-data:

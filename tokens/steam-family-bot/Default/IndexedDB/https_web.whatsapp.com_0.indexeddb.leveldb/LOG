@@ -1,0 +1,11 @@
+2025/07/06-23:36:34.278 5850 Reusing MANIFEST D:\dev\SteamFamilyZap\tokens\steam-family-bot\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/06-23:36:34.278 5850 Recovering log #88
+2025/07/06-23:36:34.287 5850 Reusing old log D:\dev\SteamFamilyZap\tokens\steam-family-bot\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000088.log 
+2025/07/06-23:36:35.504 9604 Level-0 table #93: started
+2025/07/06-23:36:35.516 9604 Level-0 table #93: 239007 bytes OK
+2025/07/06-23:36:35.517 9604 Delete type=0 #88
+2025/07/06-23:36:35.518 9604 Manual compaction at level-0 from '\x00&\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00'\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/06-23:36:36.556 7dec Compacting 1@1 + 1@2 files
+2025/07/06-23:36:36.597 7dec Generated table #94@1: 54378 keys, 2030673 bytes
+2025/07/06-23:36:36.597 7dec Compacted 1@1 + 1@2 files => 2030673 bytes
+2025/07/06-23:36:36.598 7dec compacted to: files[ 0 0 1 0 0 0 0 ]
