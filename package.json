@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec \"ts-node src/app.ts\"",
+    "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/app.js",
     "db:schema": "dotenv -e .env -- sh -c 'docker compose exec -T postgres psql -U \"$PG_USER\" -d \"$PG_DATABASE\" < ./src/database/schema.sql'",
@@ -27,8 +27,10 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@hapi/boom": "^10.0.1",
+    "baileys": "^6.7.18",
     "dotenv": "^17.0.1",
     "pg": "^8.12.0",
-    "venom-bot": "^5.3.0"
+    "qrcode-terminal": "^0.12.0"
   }
 }

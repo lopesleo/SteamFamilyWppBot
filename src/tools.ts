@@ -72,7 +72,7 @@ export const tools: FunctionDeclarationsTool[] = [
       {
         name: "get_family_sharing_games",
         description:
-          "Lista todos os jogos catalogados no banco de dados que são compatíveis com o recurso de Compartilhamento Familiar (Family Sharing) da Steam.",
+          "Exibe uma lista completa e única de todos os jogos que a família possui em ordem. Use esta função para ver a biblioteca inteira de jogos da família.",
         parameters: {
           type: SchemaType.OBJECT,
           properties: {}, // Esta função não precisa de parâmetros
@@ -81,7 +81,7 @@ export const tools: FunctionDeclarationsTool[] = [
       {
         name: "get_game_copies_report",
         description:
-          "Gera um relatório mostrando quantos membros da família possuem cada jogo, ordenado pelos mais populares.",
+          "Cria um relatório que conta quantas cópias de cada jogo existem na família. O resultado é ordenado para mostrar os jogos mais populares (com mais cópias) primeiro.",
         parameters: {
           type: SchemaType.OBJECT,
           properties: {}, // Esta função não precisa de parâmetros

@@ -203,8 +203,10 @@ export interface Vaquinha {
   target_amount: number;
   amount_collected: number;
   status: "active" | "completed" | "cancelled";
-  started_by: string; // personaName de quem iniciou
+  started_by: string;
+  started_by_user_id: string;
   contributions: Contribution[];
+  missing_contributors?: string[];
 }
 
 export interface ISteamService {

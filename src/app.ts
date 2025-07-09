@@ -1,11 +1,13 @@
+// src/app.ts
+
 import "dotenv/config";
 import { ISteamService, SteamProfile } from "./interfaces/ISteamService";
 import { IWhatsAppClient } from "./interfaces/IWhatsAppClient";
 import { GeminiAIService } from "./services/GeminiAIService";
 import { SteamService } from "./services/SteamService";
-import { WhatsAppVenomClient } from "./services/WhatsappVenomClient";
 import { Content, Part } from "@google/generative-ai";
 import { DatabaseService } from "./services/DatabaseService";
+import { WhatsAppBaileysClient } from "./services/WhatsappBaileysClient";
 
 class Bot {
   private steamService: ISteamService;
@@ -32,7 +34,7 @@ class Bot {
       this.dbService
     );
     this.aiService = new GeminiAIService(process.env.GEMINI_APIKEY);
-    this.whatsAppClient = new WhatsAppVenomClient();
+    this.whatsAppClient = new WhatsAppBaileysClient();
     this.start();
   }
 
@@ -57,39 +59,28 @@ class Bot {
     if (!msg.text) return;
 
     console.log(
-      `> Mensagem de ${msg.chatId ?? "privado"} recebida em ${msg.from}: "${msg.text}"`
+      `> Mensagem de ${msg.chatId ?? "privado"} recebida em ${msg.from}: "${
+        msg.text
+      }"`
     );
 
     try {
-      const isGroupMessage = msg.from === this.steamWPPGroup;
-      const senderProfile = await this.dbService.getUserByWhatsappId(
-        msg.chatId ?? msg.from
-      );
+      const isGroupMessage = msg.chatId === this.steamWPPGroup;
+      // Para mensagens de grupo, o remetente real está em `from`. Para mensagens privadas, `from` e `chatId` são iguais.
+      const senderWppId = isGroupMessage ? msg.from : msg.chatId!;
+      const senderProfile =
+        await this.dbService.getUserByWhatsappId(senderWppId);
 
-      if (!isGroupMessage) {
-        if (!senderProfile) {
-          console.warn(
-            `Remetente não encontrado no banco de dados: ${msg.from}. Verifique se o usuário está cadastrado.`
-          );
-          return;
-        }
-      }
-
-      if (!isGroupMessage && !senderProfile) {
+      if (!senderProfile) {
         console.warn(
-          `Mensagem de número não cadastrado e não vinda do grupo: ${msg.from}. Ignorando.`
+          `Remetente não cadastrado (${senderWppId}). Ignorando mensagem.`
         );
         return;
       }
 
-      if (isGroupMessage) {
-        msg.from = this.steamWPPGroup;
-        console.log(
-          `> Mensagem redirecionada para o grupo: ${this.steamWPPGroup}`
-        );
-      } else {
-        console.log(`> Remetente identificado: ${senderProfile!.personaName}`);
-      }
+      const destinationId = isGroupMessage ? this.steamWPPGroup : senderWppId;
+      console.log(`> Remetente identificado: ${senderProfile.personaName}`);
+
       const initialResponse = await this.aiService.processMessage(msg.text);
       if (initialResponse.functionCall) {
         const functionCall = initialResponse.functionCall;
@@ -101,7 +92,6 @@ class Bot {
           `🔧 IA solicitou: ${functionName}(${JSON.stringify(functionArgs)})`
         );
 
-        // Executa a função solicitada pela IA
         switch (functionName) {
           case "start_vaquinha": {
             const activeVaquinha = await this.dbService.getActiveVaquinha();
@@ -130,12 +120,13 @@ class Bot {
             await this.dbService.createVaquinha(
               appId,
               price,
-              senderProfile!.steamId
+              senderProfile.steamId
             );
             functionResultData = {
               success: true,
               gameName: gameDetails.name,
               price: price,
+              starter_nickname: senderProfile.personaName,
             };
             break;
           }
@@ -151,16 +142,12 @@ class Bot {
             const amount = functionArgs.amount;
             const newTotal = await this.dbService.addContribution(
               activeVaquinha.id,
-              senderProfile!.steamId,
+              senderProfile.steamId,
               amount
             );
-            console.log(
-              `Contribuição de ${amount} BRL adicionada por ${senderProfile!.personaName}`
-            );
-            console.log(
-              `Novo total arrecadado: ${newTotal} BRL (meta: ${activeVaquinha.target_amount} BRL)`
-            );
             if (newTotal >= activeVaquinha.target_amount) {
+              console.log(newTotal, activeVaquinha.target_amount);
+
               await this.dbService.updateVaquinhaStatus(
                 activeVaquinha.id,
                 "completed"
@@ -171,13 +158,21 @@ class Bot {
                 gameName: activeVaquinha.game_name,
               };
             } else {
-              functionResultData = { success: true, goal_reached: false };
+              functionResultData = {
+                success: true,
+                goal_reached: false,
+                gameName: activeVaquinha.game_name,
+                price: activeVaquinha.target_amount,
+                total_collected: newTotal,
+                contributor: senderProfile.personaName,
+              };
             }
             break;
           }
 
           case "get_vaquinha_status": {
-            functionResultData = await this.dbService.getActiveVaquinha();
+            functionResultData =
+              await this.dbService.getActiveVaquinhaWithDetails();
             if (!functionResultData) {
               functionResultData = {
                 error: "Não há nenhuma vaquinha ativa no momento.",
@@ -193,13 +188,15 @@ class Bot {
               };
               break;
             }
-            // Regra de negócio: Apenas quem iniciou pode cancelar.
-            if (activeVaquinha.started_by != senderProfile!.personaName) {
+
+            if (activeVaquinha.started_by !== senderProfile.personaName) {
               console.log(
-                `Tentativa de cancelamento por ${senderProfile!.personaName}, mas apenas ${activeVaquinha.started_by} pode cancelar.`
+                `Tentativa de cancelamento por ${
+                  senderProfile.personaName
+                }, mas apenas o criador pode cancelar.`
               );
               functionResultData = {
-                error: `Apenas o ${activeVaquinha.started_by}, que iniciou a vaquinha, pode cancelá-la.`,
+                error: `Apenas quem iniciou a vaquinha pode cancelá-la. Peça ao @[${activeVaquinha.started_by}] para fazer isso.`,
               };
               break;
             }
@@ -222,7 +219,7 @@ class Bot {
             );
             if (!targetSteamId) {
               functionResultData = {
-                error: `Não consegui identificar o jogador "${functionArgs.identifier}".`,
+                error: `Não consegui identificar o jogador "${functionArgs.identifier} ${senderProfile!.personaName}".`,
               };
               break;
             }
@@ -233,7 +230,6 @@ class Bot {
               functionResultData =
                 await this.dbService.getOwnedGames(targetSteamId);
             } else {
-              // get_recent_games
               functionResultData =
                 await this.steamService.getRecentGames(targetSteamId);
             }
@@ -266,13 +262,12 @@ class Bot {
 
           default:
             await this.whatsAppClient.sendMessage(
-              msg.from,
+              destinationId,
               `A ferramenta solicitada, "${functionName}", não me é familiar.`
             );
             return;
         }
 
-        // Envia o resultado da função de volta para a IA
         if (
           functionResultData &&
           (!Array.isArray(functionResultData) || functionResultData.length > 0)
@@ -284,7 +279,7 @@ class Bot {
           const functionResponsePart: Part = {
             functionResponse: {
               name: functionName,
-              response: { data: functionResultData },
+              response: { result: functionResultData }, // Alterado para 'result'
             },
           };
           const finalResponse = await this.aiService.processMessage(
@@ -296,23 +291,30 @@ class Bot {
             console.log(
               `🔧 IA respondeu com a função "${functionName}": ${finalResponse.text}`
             );
-            const mentions = this.extractMentions(finalResponse.text);
+
+            // ✨ NOVA LÓGICA DE MENÇÕES
+            const { final_text, jids } = await this.processMentions(
+              finalResponse.text
+            );
 
             await this.whatsAppClient.sendMessage(
-              msg.from,
-              finalResponse.text,
+              destinationId,
+              final_text, // Envia o texto original da IA
               functionResultData.header_image,
-              mentions
+              jids // Envia a lista de JIDs para notificar
             );
           }
         } else {
           await this.whatsAppClient.sendMessage(
-            msg.from,
+            destinationId,
             `Não encontrei dados para sua solicitação.`
           );
         }
       } else if (initialResponse.text) {
-        await this.whatsAppClient.sendMessage(msg.from, initialResponse.text);
+        await this.whatsAppClient.sendMessage(
+          destinationId,
+          initialResponse.text
+        );
       }
     } catch (error) {
       console.error("❌ Erro no handleMessage:", error);
@@ -322,27 +324,72 @@ class Bot {
       );
     }
   }
-  private extractMentions(message: string): string[] {
-    const mentions: string[] = [];
-    const mentionRegex = /@(\d+)/g;
-    let match;
 
-    while ((match = mentionRegex.exec(message)) !== null) {
-      const phoneNumber = match[1];
-      mentions.push(`${phoneNumber}@c.us`);
+  /**
+   * Processa o texto recebido da IA, extrai menções e retorna o texto original
+   * junto com os JIDs correspondentes.
+   *
+   * @param text Texto recebido da IA
+   * @returns Objeto contendo o texto original e uma lista de JIDs mencionados.
+   */
+  // Em src/app.ts
+  private async processMentions(
+    text: string
+  ): Promise<{ final_text: string; jids: string[] }> {
+    const mentionRegex = /@\[?([a-zA-Z0-9_À-ú]+)\]?/g;
+
+    const uniqueNicknames = [
+      ...new Set(Array.from(text.matchAll(mentionRegex), (m) => m[1])),
+    ];
+
+    if (uniqueNicknames.length === 0) {
+      console.log("Nenhuma menção com @ encontrada.");
+      console.log("---------------------------------");
+      return { final_text: text, jids: [] };
     }
 
-    return mentions;
+    console.log(
+      `Encontrados ${uniqueNicknames.length} nicknames únicos para processar:`,
+      uniqueNicknames
+    );
+
+    const jids: string[] = [];
+    let processedText = text;
+
+    for (const nickname of uniqueNicknames) {
+      console.log(`Buscando no DB por nickname: "${nickname}"`);
+      const user = await this.dbService.getUserByNickname(nickname);
+
+      const placeholderRegex = new RegExp(`@\\[?${nickname}\\]?`, "g");
+
+      if (user && user.whatsappId) {
+        console.log(`✅ Encontrado: ${user.personaName} -> ${user.whatsappId}`);
+        if (!jids.includes(user.whatsappId)) {
+          jids.push(user.whatsappId);
+        }
+        const numberPart = user.whatsappId.split("@")[0];
+
+        console.log(
+          `Substituindo ocorrências de "@${nickname}" por "@${numberPart}".`
+        );
+        processedText = processedText.replace(
+          placeholderRegex,
+          `@${numberPart}`
+        );
+      } else {
+        console.log(
+          `❌ Nickname "${nickname}" não encontrado. Mantendo como texto.`
+        );
+        processedText = processedText.replace(placeholderRegex, `@${nickname}`);
+      }
+    }
+
+    console.log("JIDs coletados para notificação:", jids);
+    console.log("---------------------------------\n");
+
+    return { final_text: processedText, jids: jids };
   }
 
-  private formatMentionsForAI(familyMembers: any[]): string {
-    return familyMembers
-      .map((member) => {
-        const phoneNumber = member.whatsappId.replace("@c.us", "");
-        return `- ${member.personaName}: use @${phoneNumber} para mencionar`;
-      })
-      .join("\n");
-  }
   private async getTargetSteamId(
     identifier: string,
     sender: SteamProfile

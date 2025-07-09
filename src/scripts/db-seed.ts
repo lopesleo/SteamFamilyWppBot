@@ -12,32 +12,32 @@ export const familyMemberData: FamilyMember[] = [
   {
     nickname: "skeik",
     steamId: "76561198065315505",
-    whatsappId: "5521999998888@c.us",
+    whatsappId: "5522988125453@s.whatsapp.net",
   },
   {
     nickname: "xkomedy",
     steamId: "76561198074205211",
-    whatsappId: "5522998237519@c.us",
+    whatsappId: "5522998237519@s.whatsapp.net",
   },
   {
     nickname: "beibe",
     steamId: "76561198214376004",
-    whatsappId: "5522998182369@c.us",
+    whatsappId: "5522998182369@s.whatsapp.net",
   },
   {
     nickname: "méfiu",
     steamId: "76561198086970351",
-    whatsappId: "5522997012046@c.us",
+    whatsappId: "5522997012046@s.whatsapp.net",
   },
   {
     nickname: "Vitoroffs",
     steamId: "76561198147124732",
-    whatsappId: "5522999800898@c.us",
+    whatsappId: "5522999800898@s.whatsapp.net",
   },
   {
     nickname: "phelipe",
     steamId: "76561198066936599",
-    whatsappId: "5522997745789@c.us",
+    whatsappId: "5522997745789@s.whatsapp.net",
   },
 ];
 

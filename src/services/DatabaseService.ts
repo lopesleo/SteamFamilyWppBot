@@ -192,7 +192,7 @@ export class DatabaseService {
       GROUP BY
         g.app_id, g.name, g.img_logo_url
       ORDER BY
-        copy_count DESC, g.name ASC;
+         g.name ASC;
     `;
 
     const res = await this.pool.query(query);
@@ -205,21 +205,52 @@ export class DatabaseService {
       copy_count: row.copy_count,
     }));
   }
+  // Em src/services/DatabaseService.ts
+
   public async findGameIdByName(name: string): Promise<number | null> {
+    // 1. Tentativa de match exato (rápido e preciso)
     const exactQuery =
       "SELECT app_id FROM games WHERE LOWER(name) = LOWER($1) LIMIT 1";
     let res = await this.pool.query(exactQuery, [name]);
     if (res.rows.length > 0) {
+      console.log(`[DB Search] Match exato encontrado para: "${name}"`);
       return res.rows[0].app_id;
     }
 
-    // 2. Se não encontrar, usa o LIKE para uma busca mais ampla
-    const likeQuery = "SELECT app_id FROM games WHERE name ILIKE $1 LIMIT 1";
-    res = await this.pool.query(likeQuery, [`%${name}%`]);
+    // 2. Tentativa de match normalizado (ignora caracteres especiais e espaços)
+    // Ex: "The Last of Us™: Part I" se torna "thelastofusparti"
+    const normalizedQuery = `
+    SELECT app_id FROM games 
+    WHERE LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]', '', 'g')) = LOWER(REGEXP_REPLACE($1, '[^a-zA-Z0-9]', '', 'g'))
+    LIMIT 1;
+  `;
+    res = await this.pool.query(normalizedQuery, [name]);
     if (res.rows.length > 0) {
+      console.log(`[DB Search] Match normalizado encontrado para: "${name}"`);
       return res.rows[0].app_id;
     }
 
+    // 3. Último recurso: busca por similaridade (fuzzy search)
+    // Encontra o jogo com o nome mais parecido com o que foi digitado.
+    // O valor 0.3 é o nosso "nível de confiança" na similaridade.
+    const similarityQuery = `
+    SELECT app_id, name, similarity(name, $1) AS sml
+    FROM games
+    WHERE similarity(name, $1) > 0.3
+    ORDER BY sml DESC, name
+    LIMIT 1;
+  `;
+    res = await this.pool.query(similarityQuery, [name]);
+    if (res.rows.length > 0) {
+      console.log(
+        `[DB Search] Match por similaridade encontrado para: "${name}". Jogo retornado: "${res.rows[0].name}"`
+      );
+      return res.rows[0].app_id;
+    }
+
+    console.log(
+      `[DB Search] Nenhuma correspondência encontrada para: "${name}"`
+    );
     return null;
   }
   /**
@@ -290,6 +321,44 @@ export class DatabaseService {
       personaState: row.persona_state,
     };
   }
+
+  /**
+   * Busca a vaquinha ativa com todos os detalhes de contribuintes e
+   * informações dos membros para ser enviada para a IA.
+   */
+  public async getActiveVaquinhaWithDetails(): Promise<any | null> {
+    const vaquinha = await this.getActiveVaquinha();
+    if (!vaquinha) return null;
+
+    // Busca todos os usuários para saber quem falta contribuir
+    const allUsers = await this.getAllUsers();
+    const contributorsQuery = `
+      SELECT u.steam_id, u.persona_name, c.amount
+      FROM contributions c
+      JOIN users u ON c.user_id = u.steam_id
+      WHERE c.vaquinha_id = $1
+  `;
+    const contributorsRes = await this.pool.query(contributorsQuery, [
+      vaquinha.id,
+    ]);
+    const contributors = contributorsRes.rows;
+
+    const contributorIds = new Set(contributors.map((c) => c.steam_id));
+
+    const missingContributors = allUsers
+      .filter((u) => !contributorIds.has(u.steamId))
+      .map((u) => u.personaName);
+
+    return {
+      ...vaquinha,
+      contributors: contributors.map((c) => ({
+        personaName: c.persona_name,
+        amount: c.amount,
+      })),
+      missing_contributors: missingContributors,
+    };
+  }
+
   /**
    * Busca a vaquinha ativa no momento. Só pode haver uma.
    * @returns O objeto da vaquinha ativa ou null se não houver.
@@ -319,7 +388,13 @@ export class DatabaseService {
     if (res.rows.length === 0) {
       return null;
     }
-    return res.rows[0];
+
+    const vaquinha = res.rows[0];
+
+    vaquinha.target_amount = parseFloat(vaquinha.target_amount);
+    vaquinha.amount_collected = parseFloat(vaquinha.amount_collected);
+
+    return vaquinha;
   }
 
   /**
@@ -371,7 +446,7 @@ export class DatabaseService {
       const res = await client.query(updateQuery, [amount, vaquinhaId]);
 
       await client.query("COMMIT");
-      return res.rows[0].amount_collected;
+      return parseFloat(res.rows[0].amount_collected);
     } catch (e) {
       await client.query("ROLLBACK");
       throw e;

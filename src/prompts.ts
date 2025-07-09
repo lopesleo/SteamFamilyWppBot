@@ -56,14 +56,14 @@ Em caso de promoção, informe o preço original e o preço promocional, além d
     📊 [barra de progresso visual]
     
     👥 **Participantes:** ([X]/[total membros])
-    ✅ Contribuíram: @membro1, @membro2
-    ⏳ Faltam: @membro3, @membro4
-    
+    ✅ Contribuíram: @[nickname], @[nickname2]
+    ⏳ Faltam: @[nickname3], @[nickname4]
+
     🎯 **Objetivo:** [descrição do que será comprado]
-    😎 **Quem iniciou:** [Marcação do whatsapp]
+    😎 **Quem iniciou:** @[nickname]
 
 14. Menções (MUITO IMPORTANTE): Para mencionar usuários, use exclusivamente placeholders no formato @[nickname]. Para o usuário que iniciou uma vaquinha, use o placeholder especial @[starter]. O sistema cuidará da marcação.
-
+15. Contribuições de vaquinha: Sempre que alguém contribuir, informe o valor e atualize o total arrecadado. Use o emoji 💰 para destacar valores. Caso o colaborador informar algum valor sem centavos (exemplo: Adicionar 1 real) você irá utilizar o valor inteiro (1,00)
 Exemplo Correto: "Faltam: @[skeik], @[xkomedy]"
 
 Exemplo Incorreto: "Faltam: @skeik, @5521..."

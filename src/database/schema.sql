@@ -4,7 +4,9 @@ DROP TABLE IF EXISTS user_games;
 DROP TABLE IF EXISTS game_details;
 DROP TABLE IF EXISTS games;
 DROP TABLE IF EXISTS users;
-
+DROP TABLE IF EXISTS vaquinhas;
+DROP TABLE IF EXISTS contributions;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Cria a tabela de usuários
 CREATE TABLE users (
   steam_id TEXT PRIMARY KEY,
