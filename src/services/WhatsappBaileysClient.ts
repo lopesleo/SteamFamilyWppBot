@@ -1,141 +1,99 @@
+// src/services/WhatsAppBaileysClient.ts
 import makeWASocket, {
   DisconnectReason,
-  AnyMessageContent,
   useMultiFileAuthState,
-  WASocket,
-  MessageUpsertType,
   WAMessage,
-  jidNormalizedUser,
 } from "baileys";
 import { Boom } from "@hapi/boom";
+import pino from "pino";
 import {
   IWhatsAppClient,
   WhatsAppMessage,
 } from "../interfaces/IWhatsAppClient";
-import * as path from "path";
-import * as qrcode from "qrcode-terminal";
 
 export class WhatsAppBaileysClient implements IWhatsAppClient {
-  private socket?: WASocket;
-  private authFolder = path.join(__dirname, "baileys_auth");
-
-  constructor() {}
+  private socket: any;
 
   async initialize(): Promise<void> {
-    const { state, saveCreds } = await useMultiFileAuthState(this.authFolder);
+    const { state, saveCreds } =
+      await useMultiFileAuthState("auth_info_baileys");
+    const logger = pino({ level: "silent" });
 
     this.socket = makeWASocket({
       auth: state,
+      printQRInTerminal: false,
+      logger,
+      browser: ["SteamFamilyBot", "Chrome", "1.0.0"],
     });
 
-    this.socket.ev.on("creds.update", saveCreds);
-
-    this.socket.ev.on("connection.update", (update) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        console.log("📱 QR Code recebido! Escaneie para conectar:");
-        qrcode.generate(qr, { small: true });
+    if (!this.socket.authState.creds.registered) {
+      const phoneNumber = process.env.BOT_PHONE_NUMBER;
+      if (!phoneNumber) {
+        throw new Error(
+          "Número de telefone do bot não encontrado no .env (BOT_PHONE_NUMBER)"
+        );
       }
 
-      if (connection === "open") {
-        console.log("✅ Baileys conectado com sucesso!");
-      } else if (connection === "close") {
+      setTimeout(async () => {
+        const code = await this.socket.requestPairingCode(phoneNumber);
+        console.log(`\n\n================================================`);
+        console.log(`✅ SEU CÓDIGO DE PAREAMENTO É: ${code}`);
+        console.log(`================================================\n\n`);
+        console.log(
+          "Abra o WhatsApp no seu celular, vá em 'Aparelhos Conectados' > 'Conectar um aparelho' > 'Conectar com número de telefone' e insira o código acima."
+        );
+      }, 3000);
+    }
+
+    this.socket.ev.on("connection.update", (update: any) => {
+      const { connection, lastDisconnect } = update;
+      if (connection === "close") {
         const shouldReconnect =
           (lastDisconnect?.error as Boom)?.output?.statusCode !==
           DisconnectReason.loggedOut;
-
-        console.log(`❌ Conexão fechada! Reconectando: ${shouldReconnect}`);
-
-        if (!shouldReconnect) {
-          console.error(
-            "🛑 Desconectado permanentemente. Apague a pasta 'baileys_auth' para gerar um novo QR Code."
-          );
+        console.log(
+          "Conexão fechada. Motivo:",
+          lastDisconnect?.error,
+          ". Reconectando:",
+          shouldReconnect
+        );
+        if (shouldReconnect) {
+          this.initialize();
         }
+      } else if (connection === "open") {
+        console.log("✅ Cliente Baileys conectado via Código de Pareamento!");
       }
     });
+
+    this.socket.ev.on("creds.update", saveCreds);
   }
 
   onMessage(handler: (msg: WhatsAppMessage) => Promise<void>): void {
-    if (!this.socket) {
-      throw new Error("O cliente WhatsApp não foi inicializado.");
-    }
-
     this.socket.ev.on(
       "messages.upsert",
-      async (m: { messages: WAMessage[]; type: MessageUpsertType }) => {
-        if (m.type !== "notify") return;
+      async (m: { messages: WAMessage[] }) => {
+        const receivedMsg = m.messages[0];
+        if (!receivedMsg.message || receivedMsg.key.fromMe) return;
 
-        for (const message of m.messages) {
-          if (message.key.fromMe || !message.message) continue;
-
-          const botId = this.socket?.user?.id;
-          if (!botId) continue; // Se o bot não estiver totalmente conectado, ignora
-
-          const chatId = message.key.remoteJid!;
-          const isGroup = chatId.endsWith("@g.us");
-
-          const mentionedJids =
-            message.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
-            [];
-
-          // 2. Normalizamos o ID do bot para garantir uma comparação correta
-          const normalizedBotId = jidNormalizedUser(botId);
-          const botWasMentioned = mentionedJids.includes(normalizedBotId);
-
-          console.log(
-            `📩 Nova mensagem recebida de ${message.key.participant || chatId} (Grupo: ${isGroup})`
-          );
-          console.log(
-            `🔍 Verificando menção. BotID Normalizado: ${normalizedBotId}. Mencionado: ${botWasMentioned}`
-          );
-
-          const shouldProcess = !isGroup || (isGroup && botWasMentioned);
-
-          if (!shouldProcess) {
-            continue;
-          }
-
-          console.log(`✅ Mensagem APROVADA para processamento.`);
-
-          let text =
-            message.message.conversation ||
-            message.message.extendedTextMessage?.text ||
-            message.message.imageMessage?.caption ||
-            "";
-
-          if (isGroup) {
-            const botMention = `@${normalizedBotId.split("@")[0]}`;
-            text = text.replace(botMention, "").trim();
-          }
-
-          const from = message.key.participant || chatId;
-
-          if (text) {
-            await handler({ from, text, chatId });
-          }
+        const messageText =
+          receivedMsg.message.conversation ||
+          receivedMsg.message.extendedTextMessage?.text;
+        if (messageText) {
+          const msg: WhatsAppMessage = {
+            from: receivedMsg.key.remoteJid!,
+            text: messageText,
+          };
+          await handler(msg);
         }
       }
     );
   }
-  async sendMessage(
-    to: string,
-    message: string,
-    image?: string,
-    mentions?: string[]
-  ): Promise<void> {
-    if (!this.socket) {
-      throw new Error("O cliente WhatsApp não foi inicializado.");
+
+  async sendMessage(to: string, text: string): Promise<void> {
+    try {
+      await this.socket.sendMessage(to, { text });
+    } catch (error) {
+      console.error("Erro ao enviar mensagem via Baileys:", error);
     }
-
-    // ## A CORREÇÃO ESTÁ AQUI ##
-    // A propriedade 'mentions' foi movida para dentro do objeto 'content',
-    // que é o segundo argumento do 'sendMessage'.
-    const content: AnyMessageContent = image
-      ? { image: { url: image }, caption: message, mentions: mentions }
-      : { text: message, mentions: mentions };
-
-    // Agora enviamos apenas o 'content'. O Baileys lerá a propriedade 'mentions' de dentro dele.
-    await this.socket.sendMessage(to, content);
   }
 }
