@@ -7,6 +7,7 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/app.js",
+    "db:schema:neon": "ts-node --project tsconfig.json ./src/scripts/db-apply-schema.ts",
     "db:schema": "dotenv -e .env -- sh -c 'docker compose exec -T postgres psql -U \"$PG_USER\" -d \"$PG_DATABASE\" < ./src/database/schema.sql'",
     "db:seed": "ts-node --project tsconfig.json ./src/scripts/db-seed.ts",
     "db:setFamilyGames": "ts-node --project tsconfig.json ./src/scripts/db-setFamilyGames.ts",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^24.0.10",
     "@types/pg": "^8.11.6",
+    "@types/qrcode-terminal": "^0.12.2",
     "dotenv-cli": "^7.4.4",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
