@@ -34,46 +34,19 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
 
       this.socket = makeWASocket({
         auth: state,
-        printQRInTerminal: false, // This is the key setting to display the QR code
+        printQRInTerminal: true, // This is the key setting to display the QR code
         logger,
+        browser: ["SteamFamilyZap", "Safari", "1.0"],
       });
 
-      // --- Removed manual QR code generation ---
-      // This section is typically not needed if printQRInTerminal is true,
-      // as Baileys handles the QR display automatically on first connection.
-
-      // --- Pairing code section (currently commented out) ---
-      // This part is for phone number pairing, which is an alternative
-      // to QR code. Keep it commented unless you specifically need it.
-      /*
-      if (!this.socket.authState.creds.registered) {
-        const phoneNumber = process.env.BOT_PHONE_NUMBER;
-        if (!phoneNumber) {
-          throw new Error(
-            "Número de telefone do bot não encontrado no .env (BOT_PHONE_NUMBER)"
-          );
-        }
-
-        setTimeout(async () => {
-          const code = await this.socket.requestPairingCode(phoneNumber);
-          console.log(`\n\n================================================`);
-          console.log(`✅ SEU CÓDIGO DE PAREAMENTO É: ${code}`);
-          console.log(`================================================\n\n`);
-          console.log(
-            "Abra o WhatsApp no seu celular, vá em 'Aparelhos Conectados' > 'Conectar um aparelho' > 'Conectar com número de telefone' e insira o código acima."
-          );
-        }, 30000); // Wait 30 seconds before requesting pairing code
-      }
-      */
-
-      // Event listener for connection updates
       this.socket.ev.on("connection.update", (update: any) => {
         const { connection, lastDisconnect, qr, requestPairingCode } = update;
 
-        // if (qr) {
-        //   console.log("📱 QR Code recebido! Escaneie para conectar:");
-        //   qrcode.generate(qr, { small: true });
-        // }
+        if (qr) {
+          console.log("📱 QR Code recebido! Escaneie para conectar:");
+          qrcode.generate(qr, { small: true });
+          console.log("QR: ", qr);
+        }
 
         if (!this.socket.authState.creds.registered) {
           const phoneNumber = process.env.BOT_PHONE_NUMBER;
@@ -82,18 +55,7 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
               "Número de telefone do bot não encontrado no .env (BOT_PHONE_NUMBER)"
             );
           }
-
-          setTimeout(async () => {
-            const code = await this.socket.requestPairingCode(phoneNumber);
-            console.log(`\n\n================================================`);
-            console.log(`✅ SEU CÓDIGO DE PAREAMENTO É: ${code}`);
-            console.log(`================================================\n\n`);
-            console.log(
-              "Abra o WhatsApp no seu celular, vá em 'Aparelhos Conectados' > 'Conectar um aparelho' > 'Conectar com número de telefone' e insira o código acima."
-            );
-          }, 3000); // Wait 3 seconds before requesting pairing code
         }
-
         if (connection === "close") {
           const shouldReconnect =
             (lastDisconnect?.error as Boom)?.output?.statusCode !==
@@ -114,8 +76,6 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
             console.log(
               "Sessão encerrada pelo WhatsApp. Por favor, reinicie a aplicação e escaneie o QR Code novamente."
             );
-            // Optionally, you might want to exit the process here if logged out permanently
-            // process.exit(1);
           }
         } else if (connection === "open") {
           console.log("✅ Cliente Baileys conectado!");
@@ -125,7 +85,6 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
         }
       });
 
-      // Event listener for credential updates (important for saving session)
       this.socket.ev.on("creds.update", saveCreds);
     } catch (error) {
       console.error("Erro na inicialização do Baileys:", error);
