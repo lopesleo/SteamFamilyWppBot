@@ -8,7 +8,6 @@ import { SteamService } from "./services/SteamService";
 import { Content, Part } from "@google/generative-ai";
 import { DatabaseService } from "./services/DatabaseService";
 import { WhatsAppBaileysClient } from "./services/WhatsappBaileysClient";
-import express from "express";
 
 class Bot {
   private steamService: ISteamService;
@@ -16,7 +15,6 @@ class Bot {
   private whatsAppClient: IWhatsAppClient;
   private dbService: DatabaseService;
   private readonly steamWPPGroup: string;
-  private app: express.Application;
 
   constructor() {
     if (!process.env.STEAM_APIKEY || !process.env.GEMINI_APIKEY) {
@@ -38,20 +36,8 @@ class Bot {
     );
     this.aiService = new GeminiAIService(process.env.GEMINI_APIKEY);
     this.whatsAppClient = new WhatsAppBaileysClient();
-    this.app = express(); // Initialize Express app
-    this.setupHealthCheck(); // Setup health check endpoint
 
     this.start();
-  }
-  private setupHealthCheck() {
-    const port = process.env.PORT || 3000; // Use PORT env variable or default to 3000
-    this.app.get("/health", (req, res) => {
-      res.status(200).send("Bot is healthy!");
-    });
-
-    this.app.listen(port, () => {
-      console.log(`🚀 Health check server listening on port ${port}`);
-    });
   }
 
   private async start() {
