@@ -217,7 +217,6 @@ export class DatabaseService {
       copy_count: row.copy_count,
     }));
   }
-  // Em src/services/DatabaseService.ts
 
   public async findGameIdByName(name: string): Promise<number | null> {
     // 1. Tentativa de match exato (rápido e preciso)
@@ -476,5 +475,30 @@ export class DatabaseService {
   ): Promise<void> {
     const query = `UPDATE vaquinhas SET status = $1 WHERE id = $2;`;
     await this.pool.query(query, [status, vaquinhaId]);
+  }
+  // Adicionar dentro da classe DatabaseService em src/services/DatabaseService.ts
+
+  public async isGiveawayAnnounced(giveawayApiId: number): Promise<boolean> {
+    const query =
+      "SELECT id FROM announced_giveaways WHERE giveaway_api_id = $1";
+    const res = await this.pool.query(query, [giveawayApiId]);
+    return res.rows.length > 0;
+  }
+
+  public async markGiveawayAsAnnounced(giveaway: {
+    id: number;
+    title: string;
+    platforms: string;
+  }): Promise<void> {
+    const query = `
+      INSERT INTO announced_giveaways (giveaway_api_id, title, platform)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (giveaway_api_id) DO NOTHING;
+    `;
+    await this.pool.query(query, [
+      giveaway.id,
+      giveaway.title,
+      giveaway.platforms,
+    ]);
   }
 }

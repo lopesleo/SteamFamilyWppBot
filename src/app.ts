@@ -8,12 +8,14 @@ import { SteamService } from "./services/SteamService";
 import { Content, Part } from "@google/generative-ai";
 import { DatabaseService } from "./services/DatabaseService";
 import { WhatsAppBaileysClient } from "./services/WhatsappBaileysClient";
-
+import { IGamerPowerService, Giveaway } from "./interfaces/IGamerPowerService";
+import { GamerPowerService } from "./services/GamePowerService";
 class Bot {
   private steamService: ISteamService;
   private aiService: GeminiAIService;
   private whatsAppClient: IWhatsAppClient;
   private dbService: DatabaseService;
+  private gamerPowerService: IGamerPowerService;
   private readonly steamWPPGroup: string;
 
   constructor() {
@@ -37,6 +39,7 @@ class Bot {
     this.aiService = new GeminiAIService(process.env.GEMINI_APIKEY);
     this.whatsAppClient = new WhatsAppBaileysClient();
 
+    this.gamerPowerService = new GamerPowerService();
     this.start();
   }
 
@@ -47,9 +50,70 @@ class Bot {
       console.log(
         "🤖 Bot online, com banco de dados PostgreSQL e ciente do contexto!"
       );
+      this.scheduleFreeGamesCheck();
     } catch (error) {
       console.error("Falha fatal ao inicializar o bot:", error);
       process.exit(1);
+    }
+  }
+  private scheduleFreeGamesCheck() {
+    console.log("📰 Agendando verificação de jogos grátis a cada 6 horas.");
+
+    setTimeout(() => this.checkForNewGiveaways(), 10 * 1000);
+
+    setInterval(() => this.checkForNewGiveaways(), 6 * 60 * 60 * 1000);
+  }
+
+  private async checkForNewGiveaways() {
+    console.log("\n🔎 Verificando novos jogos grátis...");
+    try {
+      // Filtramos por jogos nas plataformas de PC mais populares
+      const giveaways = await this.gamerPowerService.getGiveaways({
+        platform: "pc.steam.epic-games-store.gog",
+        type: "game",
+        "sort-by": "date",
+      });
+
+      if (giveaways.length === 0) {
+        console.log("Nenhum giveaway de jogo encontrado no momento.");
+        return;
+      }
+
+      // Itera sobre a lista de trás para frente para anunciar os mais antigos primeiro
+      for (const giveaway of giveaways.reverse()) {
+        const alreadyAnnounced = await this.dbService.isGiveawayAnnounced(
+          giveaway.id
+        );
+
+        if (!alreadyAnnounced) {
+          console.log(`✨ Novo jogo grátis encontrado: ${giveaway.title}`);
+
+          const message =
+            `🎉 *JOGO GRÁTIS NA ÁREA!* 🎉\n\n` +
+            `*Título:* ${giveaway.title}\n` +
+            `*Plataformas:* ${giveaway.platforms}\n` +
+            `*Valor de mercado:* ${giveaway.worth}\n\n` +
+            `*Instruções:*\n${giveaway.instructions}\n\n` +
+            `*Pegue o seu aqui:*\n${giveaway.open_giveaway_url}\n\n` +
+            `_Corre que é por tempo limitado!_ 🎮`;
+
+          await this.whatsAppClient.sendMessage(
+            this.steamWPPGroup,
+            message,
+            giveaway.image // Envia a imagem do jogo junto com a mensagem
+          );
+
+          // Marca o jogo como anunciado no banco de dados
+          await this.dbService.markGiveawayAsAnnounced(giveaway);
+          console.log(`✅ Anunciado: "${giveaway.title}" no grupo.`);
+
+          // Uma pausa de 3 segundos para não floodar o grupo com múltiplos anúncios de uma vez
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+      }
+      console.log("🏁 Verificação de jogos grátis concluída.\n");
+    } catch (error) {
+      console.error("❌ Erro ao verificar ou anunciar giveaways:", error);
     }
   }
 

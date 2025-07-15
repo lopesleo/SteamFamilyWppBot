@@ -9,7 +9,6 @@ import makeWASocket, {
 } from "baileys";
 import { Boom } from "@hapi/boom";
 import pino from "pino";
-// import qrcode from "qrcode-terminal"; // No longer strictly needed if printQRInTerminal is true
 import {
   IWhatsAppClient,
   WhatsAppMessage,

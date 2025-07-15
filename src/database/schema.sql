@@ -69,3 +69,11 @@ CREATE TABLE contributions (
     FOREIGN KEY (vaquinha_id) REFERENCES vaquinhas (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (steam_id)
 );
+
+CREATE TABLE announced_giveaways (
+  id SERIAL PRIMARY KEY,
+  giveaway_api_id INTEGER UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  platform VARCHAR(150),
+  announced_at TIMESTAMPTZ DEFAULT NOW()
+);
