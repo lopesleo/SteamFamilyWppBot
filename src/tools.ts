@@ -72,7 +72,7 @@ export const tools: FunctionDeclarationsTool[] = [
       {
         name: "get_family_sharing_games",
         description:
-          "Exibe uma lista completa e única de todos os jogos que a família possui em ordem. Use esta função para ver a biblioteca inteira de jogos da família.",
+          "Exibe uma lista completa e única de todos os jogos que a família possui. Use esta função para ver a biblioteca inteira de jogos da família.",
         parameters: {
           type: SchemaType.OBJECT,
           properties: {}, // Esta função não precisa de parâmetros

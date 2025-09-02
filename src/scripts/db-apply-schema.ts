@@ -5,7 +5,7 @@ import path from "path";
 import { Client } from "pg";
 
 async function applySchema() {
-  console.log("Aplicando schema ao banco de dados Neon...");
+  console.log("Aplicando schema ao banco de dados...");
 
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL não encontrada no .env");
@@ -17,7 +17,7 @@ async function applySchema() {
 
   try {
     const schemaSql = fs.readFileSync(
-      path.join(__dirname, "../database/schema.sql"), // Caminho para seu arquivo .sql
+      path.join(__dirname, "../database/schema.sql"),
       "utf8"
     );
 

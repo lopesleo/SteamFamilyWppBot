@@ -68,6 +68,8 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
+src/scripts/db-seed.ts
+
 # dotenv environment variable files
 .env
 .env.*

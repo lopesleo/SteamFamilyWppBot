@@ -1,43 +1,27 @@
 import { DatabaseService } from "../services/DatabaseService";
 import "dotenv/config";
 
-// Interface para clareza dos dados dos membros
 interface FamilyMember {
   nickname: string;
   steamId: string;
-  whatsappId: string; // Formato: 55[DDD][Numero]@c.us
+  whatsappId: string; // Formato: 55[DDD][Numero]@s.whatsapp.net
 }
 
 export const familyMemberData: FamilyMember[] = [
   {
-    nickname: "skeik",
-    steamId: "76561198065315505",
-    whatsappId: "5522988125453@s.whatsapp.net",
+    nickname: "example1",
+    steamId: "12345678901234567",
+    whatsappId: "550000000001@s.whatsapp.net",
   },
   {
-    nickname: "xkomedy",
-    steamId: "76561198074205211",
-    whatsappId: "5522998237519@s.whatsapp.net",
+    nickname: "example2",
+    steamId: "23456789012345678",
+    whatsappId: "550000000002@s.whatsapp.net",
   },
   {
-    nickname: "beibe",
-    steamId: "76561198214376004",
-    whatsappId: "5522998182369@s.whatsapp.net",
-  },
-  {
-    nickname: "méfiu",
-    steamId: "76561198086970351",
-    whatsappId: "5522997012046@s.whatsapp.net",
-  },
-  {
-    nickname: "Vitoroffs",
-    steamId: "76561198147124732",
-    whatsappId: "5522999800898@s.whatsapp.net",
-  },
-  {
-    nickname: "phelipe",
-    steamId: "76561198066936599",
-    whatsappId: "5522997745789@s.whatsapp.net",
+    nickname: "example3",
+    steamId: "34567890123456789",
+    whatsappId: "550000000003@s.whatsapp.net",
   },
 ];
 

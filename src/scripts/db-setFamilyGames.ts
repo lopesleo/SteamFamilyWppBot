@@ -26,7 +26,6 @@ async function syncAllFamilyData() {
   const steamService = new SteamService(process.env.STEAM_APIKEY, dbService);
 
   try {
-    // 1. Busca todos os membros da família do nosso banco de dados
     const familyMembers = await dbService.getAllUsers();
 
     if (familyMembers.length === 0) {
@@ -38,13 +37,10 @@ async function syncAllFamilyData() {
       `Encontrados ${familyMembers.length} membros. Iniciando sincronização de jogos...`
     );
 
-    // Usamos um Set para armazenar todos os AppIDs únicos da família, evitando chamadas duplicadas.
     const allUniqueAppIds = new Set<number>();
 
-    // 2. Para cada membro, busca a lista de jogos que ele possui
     for (const member of familyMembers) {
       console.log(`\n- Sincronizando jogos de: ${member.personaName}`);
-      // O método getOwnedGames já busca na API e salva a relação user-game no banco.
       const ownedGames = await steamService.getOwnedGames(member.steamId);
 
       ownedGames.forEach((game) => allUniqueAppIds.add(game.appId));
@@ -61,7 +57,6 @@ async function syncAllFamilyData() {
       "--- 📝 Iniciando sincronização dos detalhes de cada jogo... ---"
     );
 
-    // 3. Agora, busca os detalhes para cada jogo único encontrado
     let count = 0;
     for (const appId of allUniqueAppIds) {
       count++;
@@ -69,11 +64,7 @@ async function syncAllFamilyData() {
         `- Buscando detalhes do jogo ${count} de ${allUniqueAppIds.size} (AppID: ${appId})`
       );
 
-      // O método getGameInfo busca os detalhes e salva na tabela 'game_details'
       await steamService.getGameInfo(appId);
-
-      // IMPORTANTE: Adiciona um atraso para respeitar os limites da API da Steam (aprox. 200 reqs / 5 min)
-      //   await delay(1500); // Atraso de 1.5 segundos
     }
 
     console.log(
@@ -83,11 +74,9 @@ async function syncAllFamilyData() {
     console.error("❌ Erro fatal durante a sincronização:", error);
     process.exit(1);
   } finally {
-    // Encerra o processo para garantir que o script não fique pendurado
     console.log("Finalizando o processo de sincronização.");
     process.exit(0);
   }
 }
 
-// Inicia o processo
 syncAllFamilyData();

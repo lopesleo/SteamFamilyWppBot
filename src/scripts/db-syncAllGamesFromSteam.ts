@@ -35,7 +35,6 @@ async function syncAllSteamGames() {
 
     const dbService = new DatabaseService();
 
-    // Processa a lista em lotes para não sobrecarregar a memória
     const batchSize = 1000;
     for (let i = 0; i < allApps.length; i += batchSize) {
       const batch = allApps.slice(i, i + batchSize);

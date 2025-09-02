@@ -1,4 +1,3 @@
-// src/services/WhatsAppBaileysClient.ts
 import makeWASocket, {
   AnyMessageContent,
   DisconnectReason,
@@ -13,11 +12,11 @@ import {
   IWhatsAppClient,
   WhatsAppMessage,
 } from "../interfaces/IWhatsAppClient";
-import qrcode from "qrcode-terminal"; // Importing qrcode for manual QR code generation
+import qrcode from "qrcode-terminal";
 
 export class WhatsAppBaileysClient implements IWhatsAppClient {
   private socket: any;
-  private isInitializing: boolean = false; // Add a flag to prevent multiple initializations
+  private isInitializing: boolean = false;
 
   async initialize(): Promise<void> {
     if (this.isInitializing) {
@@ -28,12 +27,12 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
 
     try {
       const { state, saveCreds } =
-        await useMultiFileAuthState("auth_info_baileys"); // This creates/loads the session folder
-      const logger = pino({ level: "silent" }); // Keep logging silent for cleaner output
+        await useMultiFileAuthState("auth_info_baileys");
+      const logger = pino({ level: "silent" });
 
       this.socket = makeWASocket({
         auth: state,
-        printQRInTerminal: true, // This is the key setting to display the QR code
+        printQRInTerminal: true,
         logger,
         browser: ["SteamFamilyZap", "Safari", "1.0"],
       });
@@ -67,10 +66,9 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
             shouldReconnect
           );
 
-          // Clear the initializing flag if we need to reconnect
           this.isInitializing = false;
           if (shouldReconnect) {
-            this.initialize(); // Attempt to re-initialize the connection
+            this.initialize();
           } else {
             console.log(
               "Sessão encerrada pelo WhatsApp. Por favor, reinicie a aplicação e escaneie o QR Code novamente."
@@ -78,7 +76,7 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
           }
         } else if (connection === "open") {
           console.log("✅ Cliente Baileys conectado!");
-          this.isInitializing = false; // Reset flag once connection is open
+          this.isInitializing = false;
         } else if (connection === "connecting") {
           console.log("Conectando ao WhatsApp...");
         }
@@ -87,8 +85,7 @@ export class WhatsAppBaileysClient implements IWhatsAppClient {
       this.socket.ev.on("creds.update", saveCreds);
     } catch (error) {
       console.error("Erro na inicialização do Baileys:", error);
-      this.isInitializing = false; // Ensure flag is reset on error
-      // Consider adding a retry mechanism here if it's a transient error
+      this.isInitializing = false;
     }
   }
 
