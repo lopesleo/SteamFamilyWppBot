@@ -10,22 +10,8 @@ import "dotenv/config";
 export class DatabaseService {
   private pool: Pool;
 
-  // constructor() {
-  //   this.pool = new Pool({
-  //     host: process.env.PG_HOST,
-  //     port: Number(process.env.PG_PORT),
-  //     user: process.env.PG_USER,
-  //     password: process.env.PG_PASSWORD,
-  //     database: process.env.PG_DATABASE,
-  //     ssl:
-  //       process.env.PG_SSLMODE === "true"
-  //         ? { rejectUnauthorized: false }
-  //         : false,
-  //   });
-
   constructor() {
     this.pool = new Pool({
-      // A biblioteca 'pg' entende a connectionString e configura tudo, inclusive o SSL.
       connectionString: process.env.DATABASE_URL,
     });
 

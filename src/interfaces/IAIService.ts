@@ -1,4 +1,3 @@
-// src/interfaces/IAIService.ts
 import { Content, Part } from "@google/generative-ai";
 
 export interface IAIService {
