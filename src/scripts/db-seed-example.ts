@@ -29,7 +29,7 @@ async function seed() {
   console.log("🌱 Executando script para popular o banco de dados...");
   const dbService = new DatabaseService();
 
-  for (const member of familyMemberData) {
+  for (const member of [...familyMemberData]) {
     console.log(`Inserindo/Atualizando membro: ${member.nickname}`);
     await dbService.upsertUser({
       steamId: member.steamId,

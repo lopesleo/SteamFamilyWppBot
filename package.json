@@ -31,7 +31,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@hapi/boom": "^10.0.1",
-    "baileys": "^6.7.18",
+    "@whiskeysockets/baileys": "7.0.0-rc.6",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
     "pg": "^8.12.0",
